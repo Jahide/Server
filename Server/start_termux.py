@@ -7,7 +7,7 @@ import socket
 import platform
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-FIREBASE_RTDB_URL = "https://raju-122f3-default-rtdb.firebaseio.com"
+FIREBASE_RTDB_URL = "https://camm-c9aff-default-rtdb.firebaseio.com"
 PORT = 8765
 
 # ─── Telegram Config ──────────────────────────────────────────────────────────
