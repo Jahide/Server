@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SilentWatch — Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #080c14;
+            --surface: #0d1320;
+            --card: #111827;
+            --border: #1e293b;
+            --accent: #00e676;
+            --accent-dim: rgba(0, 230, 118, .12);
+            --danger: #ff4757;
+            --warn: #ffa502;
+            --blue: #3b82f6;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --font: 'Inter', sans-serif;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            display: flex;
+            flex-direction: column
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            height: 56px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 10
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: .95rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            color: #fff
+        }
+
+        .logo-ring {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            display: grid;
+            place-items: center
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: glow 2s ease-in-out infinite
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 6px var(--accent)
+            }
+
+            50% {
+                box-shadow: none;
+                opacity: .4
+            }
+        }
+
+        .header-badges {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 500;
+            letter-spacing: .06em;
+            border: 1px solid var(--border);
+            background: var(--card)
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: background .3s, box-shadow .3s
+        }
+
+        .badge-dot.on {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent)
+        }
+
+        .badge-dot.live {
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+            animation: glow-red 1s infinite
+        }
+
+        @keyframes glow-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px var(--danger)
+            }
+
+            50% {
+                box-shadow: none
+            }
+        }
+
+        /* Layout */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            overflow: hidden
+        }
+
+        /* Feed */
+        .feed {
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden
+        }
+
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none
+        }
+
+        .feed-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            opacity: .25;
+            user-select: none
+        }
+
+        .feed-placeholder svg {
+            width: 72px;
+            height: 72px
+        }
+
+        .feed-placeholder p {
+            font-size: .8rem;
+            font-weight: 500;
+            letter-spacing: .15em;
+            text-transform: uppercase
+        }
+
+        .feed-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none
+        }
+
+        .corner {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-color: var(--accent);
+            border-style: solid;
+            opacity: 0;
+            transition: opacity .4s
+        }
+
+        .corner.tl {
+            top: 16px;
+            left: 16px;
+            border-width: 2px 0 0 2px
+        }
+
+        .corner.tr {
+            top: 16px;
+            right: 16px;
+            border-width: 2px 2px 0 0
+        }
+
+        .corner.bl {
+            bottom: 16px;
+            left: 16px;
+            border-width: 0 0 2px 2px
+        }
+
+        .corner.br {
+            bottom: 16px;
+            right: 16px;
+            border-width: 0 2px 2px 0
+        }
+
+        .feed.live .corner {
+            opacity: 1
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--danger);
+            color: #fff;
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .18em;
+            padding: 4px 12px;
+            border-radius: 4px;
+            display: none;
+            align-items: center;
+            gap: 6px
+        }
+
+        .live-tag-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #fff;
+            animation: glow-white 1s infinite
+        }
+
+        @keyframes glow-white {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .2
+            }
+        }
+
+        .feed.live .live-tag {
+            display: flex
+        }
+
+        .feed-meta {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            font-size: .65rem;
+            color: var(--muted);
+            letter-spacing: .08em
+        }
+
+        /* Watching chip */
+        .watching-chip {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: rgba(0, 0, 0, .65);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-size: .6rem;
+            font-weight: 600;
+            letter-spacing: .12em;
+            padding: 3px 10px;
+            border-radius: 4px;
+            display: none;
+            text-transform: uppercase
+        }
+
+        .feed.live .watching-chip {
+            display: block
+        }
+
+        /* Sidebar */
+        .sidebar {
+            border-left: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            gap: 20px;
+        }
+
+        .nav-tab {
+            padding: 14px 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: var(--text);
+        }
+
+        .nav-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .panel {
+            padding: 20px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .panel-title {
+            font-size: .65rem;
+            font-weight: 600;
+            letter-spacing: .16em;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 14px
+        }
+
+        /* Input */
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px
+        }
+
+        .field label {
+            font-size: .72rem;
+            color: var(--muted)
+        }
+
+        .field input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: .8rem;
+            padding: 9px 12px;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+            width: 100%
+        }
+
+        .field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim)
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: var(--font);
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s;
+            border: none;
+            letter-spacing: .04em
+        }
+
+        .btn+.btn {
+            margin-top: 8px
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000
+        }
+
+        .btn-primary:hover {
+            background: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 230, 118, .3)
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger)
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 71, 87, .08)
+        }
+
+        .btn-cam {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(0, 230, 118, .25)
+        }
+
+        .btn-cam:hover:not(:disabled) {
+            background: rgba(0, 230, 118, .2)
+        }
+
+        .btn-cam:disabled {
+            opacity: .35;
+            cursor: not-allowed
+        }
+
+        .btn-stop {
+            background: rgba(255, 71, 87, .1);
+            color: var(--danger);
+            border: 1px solid rgba(255, 71, 87, .2)
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: rgba(255, 71, 87, .2)
+        }
+
+        .btn-stop:disabled {
+            opacity: .35;
+            cursor: not-allowed
+        }
+
+        .btn-switch {
+            background: rgba(59, 130, 246, .1);
+            color: var(--blue);
+            border: 1px solid rgba(59, 130, 246, .25)
+        }
+
+        .btn-switch:hover:not(:disabled) {
+            background: rgba(59, 130, 246, .2)
+        }
+
+        .btn-switch:disabled {
+            opacity: .35;
+            cursor: not-allowed
+        }
+
+        /* Agents */
+        #agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        .agent-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: border-color .2s, box-shadow .2s;
+            font-size: .8rem
+        }
+
+        .agent-card:hover {
+            border-color: var(--accent)
+        }
+
+        .agent-card.sel {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+            color: var(--accent)
+        }
+
+        .agent-pip {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+            box-shadow: 0 0 5px var(--accent)
+        }
+
+        .agent-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .agent-eye {
+            font-size: .65rem;
+            color: var(--muted);
+            margin-left: auto;
+            flex-shrink: 0
+        }
+
+        .agent-card.sel .agent-eye {
+            color: var(--accent);
+            content: '👁'
+        }
+
+        .no-agents {
+            font-size: .75rem;
+            color: var(--muted);
+            text-align: center;
+            padding: 12px 0
+        }
+
+        /* Stats row */
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px
+        }
+
+        .stat {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+            letter-spacing: .04em
+        }
+
+        .stat-label {
+            font-size: .6rem;
+            color: var(--muted);
+            letter-spacing: .1em;
+            text-transform: uppercase
+        }
+
+        /* Log */
+        .log-wrap {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px
+        }
+
+        .log-wrap::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .log-wrap::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px
+        }
+
+        .log-item {
+            font-size: .68rem;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            padding-left: 8px;
+            border-left: 2px solid transparent;
+            color: var(--muted)
+        }
+
+        .log-item.i {
+            border-color: var(--blue);
+            color: var(--text)
+        }
+
+        .log-item.s {
+            border-color: var(--accent);
+            color: var(--accent)
+        }
+
+        .log-item.e {
+            border-color: var(--danger);
+            color: var(--danger)
+        }
+
+        .log-item.w {
+            border-color: var(--warn);
+            color: var(--warn)
+        }
+
+        .log-ts {
+            color: var(--muted);
+            margin-right: 6px;
+            font-size: .62rem
+        }
+
+        /* Notifications */
+        .notif-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            animation: slide-in 0.3s ease-out;
+            transition: transform 0.2s;
+        }
+
+        .notif-item:hover {
+            transform: scale(1.02);
+            border-color: var(--accent);
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notif-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .notif-app {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .notif-time {
+            font-size: 0.6rem;
+            color: var(--muted);
+        }
+
+        .notif-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .notif-body {
+            font-size: 0.72rem;
+            color: var(--muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .notif-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-top: 6px;
+            border: 1px solid var(--border);
+        }
+
+        /* Screen Toast Message */
+        .screen-toast {
+            background: rgba(13, 19, 32, 0.95);
+            border: 1px solid var(--accent);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            animation: toast-in 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            max-width: 400px;
+            backdrop-filter: blur(8px);
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 4px;
+        }
+
+        .toast-app {
+            font-size: 0.65rem;
+            color: var(--accent);
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .toast-body {
+            font-weight: 500;
+        }
+
+        /* Tunnel status banner */
+        .tunnel-banner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            border: 1px solid var(--border);
+            background: var(--card);
+            margin-bottom: 12px;
+            transition: all .3s;
+        }
+
+        .tunnel-banner.active {
+            border-color: rgba(0, 230, 118, .35);
+            background: rgba(0, 230, 118, .07);
+            color: var(--accent);
+        }
+
+        .tunnel-banner.connecting {
+            border-color: rgba(59, 130, 246, .35);
+            background: rgba(59, 130, 246, .07);
+            color: var(--blue);
+        }
+
+        .tunnel-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .tunnel-url {
+            font-family: 'Courier New', monospace;
+            font-size: .65rem;
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
+        .tunnel-url.live {
+            color: var(--accent);
+        }
+
+        .tunnel-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--muted);
+            flex-shrink: 0;
+            transition: background .3s, box-shadow .3s;
+        }
+
+        .tunnel-pulse.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .tunnel-pulse.connecting {
+            background: var(--blue);
+            box-shadow: 0 0 8px var(--blue);
+            animation: glow-blue 1s ease-in-out infinite;
+        }
+
+        @keyframes glow-blue {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px var(--blue);
+            }
+
+            50% {
+                box-shadow: none;
+            }
+        }
+
+        .cloud-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 500;
+            letter-spacing: .06em;
+            border: 1px solid rgba(59, 130, 246, .25);
+            background: rgba(59, 130, 246, .08);
+            color: var(--blue);
+        }
+
+        .cloud-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--blue);
+            transition: background .3s, box-shadow .3s;
+        }
+
+        .cloud-badge-dot.synced {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .manual-url-toggle {
+            font-size: .68rem;
+            color: var(--muted);
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .manual-url-toggle:hover {
+            color: var(--text);
+        }
+
+        /* Responsive */
+        @media(max-width:680px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 55vw 1fr
+            }
+
+            .sidebar {
+                border-left: none;
+                border-top: 1px solid var(--border)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="screen-msg-container"
+        style="position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;">
+    </div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-ring">
+                <div class="logo-dot"></div>
+            </div>
+            SILENTWATCH
+        </div>
+        <div class="header-badges">
+            <div class="cloud-badge" id="cloud-tunnel-badge" title="Cloud Tunnel via Firebase">
+                <div class="cloud-badge-dot" id="cloud-dot"></div>
+                <span id="cloud-txt">CLOUD TUNNEL</span>
+            </div>
+            <div class="badge" id="srv-badge">
+                <div class="badge-dot" id="srv-dot"></div>
+                <span id="srv-txt">OFFLINE</span>
+            </div>
+            <div class="badge" id="agent-badge">
+                <div class="badge-dot" id="agent-dot"></div>
+                <span id="agent-txt">NO AGENT</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Live Feed -->
+        <div class="feed" id="feed-area">
+            <img id="video-feed" alt="Live Feed" />
+            <div class="feed-placeholder" id="placeholder">
+                <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="14" width="50" height="36" rx="4" stroke="currentColor" stroke-width="2" />
+                    <path d="M52 26L70 16V56L52 46V26Z" stroke="currentColor" stroke-width="2" />
+                    <circle cx="27" cy="32" r="7" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <p id="placeholder-txt">Awaiting Connection</p>
+            </div>
+            <div class="feed-overlay">
+                <div class="corner tl"></div>
+                <div class="corner tr"></div>
+                <div class="corner bl"></div>
+                <div class="corner br"></div>
+                <div class="live-tag">
+                    <div class="live-tag-dot"></div>LIVE
+                </div>
+            </div>
+            <div class="watching-chip" id="watching-chip">—</div>
+            <div class="feed-meta">
+                <span id="ts-overlay"></span>
+                <span id="frame-info"></span>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <div class="nav-tab active" id="tab-feed-btn" onclick="openTab('feed')">Controls</div>
+                <div class="nav-tab" id="tab-notif-btn" onclick="openTab('notif')">Notifications</div>
+            </div>
+
+            <!-- Controls & Live Panel -->
+            <div id="feed-tab" class="tab-content active" style="height: 100%; overflow-y: auto;">
+                <!-- Cloud Tunnel Status -->
+                <div class="panel">
+                    <div class="panel-title">Cloud Tunnel</div>
+
+                    <!-- Auto-connect tunnel banner -->
+                    <div class="tunnel-banner" id="tunnel-banner">
+                        <div class="tunnel-pulse" id="tunnel-pulse"></div>
+                        <div style="flex:1; min-width:0;">
+                            <div id="tunnel-status-text">Waiting for tunnel…</div>
+                            <div class="tunnel-url" id="tunnel-url-display">Run: npm run tunnel</div>
+                        </div>
+                        <span class="tunnel-icon" id="tunnel-icon">☁️</span>
+                    </div>
+
+                    <!-- Manual override (collapsed by default) -->
+                    <div id="manual-url-section" style="display:none;">
+                        <div class="field" style="margin-bottom:8px;">
+                            <label>Manual WebSocket URL</label>
+                            <input id="url-input" type="text" placeholder="wss://your-tunnel.trycloudflare.com" />
+                        </div>
+                        <button class="btn btn-primary" id="btn-connect" onclick="toggleConnect()">Connect</button>
+                        <button class="btn btn-ghost" id="btn-disconnect" onclick="disconnect()"
+                            style="display:none">Disconnect</button>
+                    </div>
+
+                    <!-- Hidden url-input (used by Firebase sync logic) if manual hidden -->
+                    <!-- url-input lives inside manual-url-section above -->
+
+                    <div class="manual-url-toggle" onclick="toggleManualUrl()" id="manual-toggle">⚙ Enter URL manually
+                    </div>
+                </div>
+
+                <!-- Agents -->
+                <div class="panel">
+                    <div class="panel-title">Active Agents</div>
+                    <div id="agent-list">
+                        <p class="no-agents">No agents connected</p>
+                    </div>
+                </div>
+
+                <!-- Camera Control -->
+                <div class="panel">
+                    <div class="panel-title">Camera Control</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <button class="btn btn-cam" id="btn-start" onclick="sendCommand('start_camera')" disabled>▶
+                            Start</button>
+                        <button class="btn btn-stop" id="btn-stop" onclick="sendCommand('stop_camera')" disabled>■
+                            Stop</button>
+                    </div>
+                    <button class="btn btn-switch" id="btn-switch" onclick="switchCam()" disabled
+                        style="margin-bottom: 8px; width: 100%;">⇄ Switch Camera (Front)</button>
+
+                    <!-- Low Internet Mode Toggle -->
+                    <button class="btn" id="btn-low-internet" onclick="toggleLowInternet()" disabled
+                        style="margin-bottom: 8px; width: 100%; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);">⚡
+                        Low Internet Mode: OFF</button>
+
+                    <!-- Video Recording -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <button class="btn" id="btn-record-start" onclick="sendCommand('start_recording')" disabled
+                            style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">🔴
+                            Record Video</button>
+                        <button class="btn btn-stop" id="btn-record-stop" onclick="sendCommand('stop_recording')"
+                            disabled>■ Stop Rec</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="panel">
+                    <div class="panel-title">Stats</div>
+                    <div class="stats">
+                        <div class="stat"><span class="stat-val" id="s-fps">—</span><span class="stat-label">FPS</span>
+                        </div>
+                        <div class="stat"><span class="stat-val" id="s-frames">0</span><span
+                                class="stat-label">Frames</span></div>
+                        <div class="stat"><span class="stat-val" id="s-kb">—</span><span
+                                class="stat-label">KB/frame</span></div>
+                        <div class="stat"><span class="stat-val" id="s-agents">0</span><span
+                                class="stat-label">Agents</span></div>
+                    </div>
+                </div>
+
+                <!-- Event Log -->
+                <div class="panel-title" style="padding:14px 16px 4px">Event Log</div>
+                <div class="log-wrap" id="log" style="flex: 1; min-height: 150px;"></div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div id="notif-tab" class="tab-content" style="height: 100%; overflow-y: auto;">
+                <div class="panel" style="flex: 1; display: flex; flex-direction: column; height: 100%;">
+                    <div class="panel-title">Notifications</div>
+                    <div class="log-wrap" id="notif-feed" style="flex: 1; min-height: 200px; display: flex; flex-direction: column; gap: 10px;">
+                        <p class="no-agents">No notifications yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let ws = null, selectedAgent = null, frames = 0, fpsCount = 0, lastFps = Date.now(), clockTick = null, heartbeatTick = null;
+        let pendingFrame = null, rafScheduled = false;
+        let manualUrlVisible = false;
+
+        // ── Tunnel UI helpers ──────────────────────────────────────────────
+        function setTunnelWaiting() {
+            const banner = document.getElementById('tunnel-banner');
+            const pulse = document.getElementById('tunnel-pulse');
+            banner.className = 'tunnel-banner';
+            pulse.className = 'tunnel-pulse';
+            document.getElementById('tunnel-status-text').textContent = 'Waiting for tunnel…';
+            document.getElementById('tunnel-url-display').textContent = 'Run: npm run tunnel';
+            document.getElementById('tunnel-url-display').className = 'tunnel-url';
+            document.getElementById('tunnel-icon').textContent = '☁️';
+            const dot = document.getElementById('cloud-dot');
+            if (dot) { dot.className = 'cloud-badge-dot'; }
+        }
+
+        function setTunnelConnecting(url) {
+            const banner = document.getElementById('tunnel-banner');
+            const pulse = document.getElementById('tunnel-pulse');
+            banner.className = 'tunnel-banner connecting';
+            pulse.className = 'tunnel-pulse connecting';
+            document.getElementById('tunnel-status-text').textContent = 'Tunnel received — connecting…';
+            document.getElementById('tunnel-url-display').textContent = url;
+            document.getElementById('tunnel-url-display').className = 'tunnel-url';
+            document.getElementById('tunnel-icon').textContent = '🔗';
+        }
+
+        function setTunnelActive(url) {
+            const banner = document.getElementById('tunnel-banner');
+            const pulse = document.getElementById('tunnel-pulse');
+            banner.className = 'tunnel-banner active';
+            pulse.className = 'tunnel-pulse active';
+            document.getElementById('tunnel-status-text').textContent = 'Tunnel connected ✅';
+            document.getElementById('tunnel-url-display').textContent = url;
+            document.getElementById('tunnel-url-display').className = 'tunnel-url live';
+            document.getElementById('tunnel-icon').textContent = '🟢';
+            const dot = document.getElementById('cloud-dot');
+            if (dot) { dot.className = 'cloud-badge-dot synced'; }
+        }
+
+        function toggleManualUrl() {
+            manualUrlVisible = !manualUrlVisible;
+            document.getElementById('manual-url-section').style.display = manualUrlVisible ? 'block' : 'none';
+            document.getElementById('manual-toggle').textContent = manualUrlVisible
+                ? '✕ Hide manual URL'
+                : '⚙ Enter URL manually';
+        }
+
+        function openTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            document.getElementById(`tab-${tab}-btn`).classList.add('active');
+        }
+
+        function renderFrame() {
+            rafScheduled = false;
+            if (!pendingFrame) return;
+            const img = document.getElementById('video-feed');
+            const prev = img.src;
+            img.onload = () => { if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev); };
+            img.src = pendingFrame;
+            pendingFrame = null;
+        }
+
+        function log(msg, t = 'i') {
+            const el = document.getElementById('log');
+            if (!el) return;
+            const ts = new Date().toTimeString().slice(0, 8);
+            const d = document.createElement('div');
+            d.className = `log-item ${t}`;
+            d.innerHTML = `<span class="log-ts">${ts}</span>${msg}`;
+            el.appendChild(d);
+            el.scrollTop = el.scrollHeight;
+            while (el.children.length > 250) el.removeChild(el.firstChild);
+        }
+
+        function setServer(on) {
+            document.getElementById('srv-dot').className = 'badge-dot' + (on ? ' on' : '');
+            document.getElementById('srv-txt').textContent = on ? 'ONLINE' : 'OFFLINE';
+        }
+        function setAgentBadge(on) {
+            document.getElementById('agent-dot').className = 'badge-dot' + (on ? ' live' : '');
+            document.getElementById('agent-txt').textContent = on ? 'AGENT LIVE' : 'NO AGENT';
+        }
+        function setLive(on) {
+            const fa = document.getElementById('feed-area');
+            const img = document.getElementById('video-feed');
+            const ph = document.getElementById('placeholder');
+            fa.classList.toggle('live', on);
+            img.style.display = on ? 'block' : 'none';
+            ph.style.display = on ? 'none' : 'flex';
+        }
+        function setCam(on) {
+            document.getElementById('btn-start').disabled = !on;
+            document.getElementById('btn-stop').disabled = !on;
+            document.getElementById('btn-switch').disabled = !on;
+            document.getElementById('btn-low-internet').disabled = !on;
+            document.getElementById('btn-record-start').disabled = !on;
+            document.getElementById('btn-record-stop').disabled = !on;
+        }
+
+        let camFacing = 'Front';
+        function switchCam() {
+            sendCommand('switch_camera');
+            camFacing = camFacing === 'Front' ? 'Back' : 'Front';
+            document.getElementById('btn-switch').textContent = `⇄ Switch Camera (${camFacing})`;
+            log(`⇄ Switched to ${camFacing} camera`);
+        }
+
+        let lowInternetMode = false;
+        function toggleLowInternet() {
+            lowInternetMode = !lowInternetMode;
+            const btn = document.getElementById('btn-low-internet');
+            if (lowInternetMode) {
+                sendCommand('low_internet_on');
+                btn.textContent = '⚡ Low Internet Mode: ON';
+                btn.style.background = 'rgba(245, 158, 11, 0.25)';
+                btn.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.2)';
+            } else {
+                sendCommand('low_internet_off');
+                btn.textContent = '⚡ Low Internet Mode: OFF';
+                btn.style.background = 'rgba(245, 158, 11, 0.1)';
+                btn.style.boxShadow = 'none';
+            }
+        }
+
+        function tickFPS() {
+            fpsCount++; const now = Date.now();
+            if (now - lastFps >= 1000) {
+                document.getElementById('s-fps').textContent = (fpsCount / ((now - lastFps) / 1000)).toFixed(1);
+                fpsCount = 0; lastFps = now;
+            }
+        }
+
+        function updateAgents(list) {
+            document.getElementById('s-agents').textContent = list.length;
+            const el = document.getElementById('agent-list');
+            if (!list.length) {
+                el.innerHTML = '<p class="no-agents">No agents connected</p>';
+                setCam(false);
+                return;
+            }
+            el.innerHTML = list.map(a => `
+    <div class="agent-card${selectedAgent === a.agent_id ? ' sel' : ''}"
+         id="acard-${a.agent_id}"
+         onclick="selectAgent('${a.agent_id}')">
+      <div class="agent-pip"></div>
+      <span class="agent-label">${a.agent_id}</span>
+      <span class="agent-eye">${selectedAgent === a.agent_id ? '👁' : ''}</span>
+    </div>`).join('');
+            if (!selectedAgent || !list.find(a => a.agent_id === selectedAgent)) {
+                selectAgent(list[0].agent_id);
+            }
+        }
+
+        function selectAgent(id) {
+            if (selectedAgent === id) return;
+            selectedAgent = id;
+            if (pendingFrame) { URL.revokeObjectURL(pendingFrame); pendingFrame = null; }
+            rafScheduled = false;
+            setLive(false); frames = 0; fpsCount = 0;
+            document.getElementById('s-frames').textContent = '0';
+            document.getElementById('s-fps').textContent = '—';
+            document.getElementById('frame-info').textContent = '';
+            setCam(true); setAgentBadge(false);
+            document.getElementById('watching-chip').textContent = id;
+            document.querySelectorAll('.agent-card').forEach(c => {
+                const cardId = c.id.replace('acard-', '');
+                c.classList.toggle('sel', cardId === id);
+                c.querySelector('.agent-eye').textContent = (cardId === id) ? '👁' : '';
+            });
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ command: 'watch_agent', agent_id: id }));
+            }
+            log(`👁 Now watching: ${id}`, 's');
+        }
+
+        let reconnectTimer = null, reconnectDelay = 1000, manualClose = false;
+        function scheduleReconnect() {
+            if (manualClose) return;
+            clearTimeout(reconnectTimer);
+            const secs = (reconnectDelay / 1000).toFixed(0);
+            log(`Retrying in ${secs}s…`, 'w');
+            document.getElementById('placeholder-txt').textContent = `Reconnecting in ${secs}s…`;
+            reconnectTimer = setTimeout(() => {
+                const url = document.getElementById('url-input').value.trim();
+                if (url) connect(false);
+            }, reconnectDelay);
+            reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        }
+        function resetReconnect() { reconnectDelay = 1000; clearTimeout(reconnectTimer); reconnectTimer = null; }
+
+        function toggleConnect() { if (ws && ws.readyState === WebSocket.OPEN) { disconnect(); return; } manualClose = false; resetReconnect(); connect(true); }
+
+        function connect(isManual = true) {
+            // Prefer the visible input; fall back to localStorage (set by Firebase)
+            const inp = document.getElementById('url-input');
+            const url = (inp && inp.value.trim()) || localStorage.getItem('sw_url') || '';
+            if (!url) { log('No WebSocket URL available. Run: npm run tunnel', 'e'); return; }
+            if (inp) inp.value = url; // sync back to field
+            if (isManual) localStorage.setItem('sw_url', url);
+            if (ws) { try { ws.close(); } catch (e) { } }
+            log(`Connecting to ${url}…`);
+            try { ws = new WebSocket(url); } catch (e) { log(`Bad URL: ${e.message}`, 'e'); scheduleReconnect(); return; }
+            ws.binaryType = 'arraybuffer';
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ role: 'admin' }));
+                resetReconnect(); setServer(true); log('Connected to broker.', 's');
+                document.getElementById('placeholder-txt').textContent = 'Awaiting Connection';
+                const btnC = document.getElementById('btn-connect');
+                const btnD = document.getElementById('btn-disconnect');
+                if (btnC) btnC.style.display = 'none';
+                if (btnD) btnD.style.display = 'block';
+                // ✅ Tunnel is fully active
+                if (typeof setTunnelActive === 'function') setTunnelActive(url);
+                clockTick = setInterval(() => document.getElementById('ts-overlay').textContent = new Date().toLocaleTimeString(), 1000);
+                heartbeatTick = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: "ping" }));
+                }, 5000);
+            };
+            ws.onclose = (evt) => {
+                setServer(false); setAgentBadge(false); setLive(false);
+                if (pendingFrame) { URL.revokeObjectURL(pendingFrame); pendingFrame = null; }
+                rafScheduled = false; updateAgents([]); setCam(false); selectedAgent = null;
+                clearInterval(clockTick); if (heartbeatTick) clearInterval(heartbeatTick);
+                const btnC = document.getElementById('btn-connect');
+                const btnD = document.getElementById('btn-disconnect');
+                if (btnC) btnC.style.display = 'block';
+                if (btnD) btnD.style.display = 'none';
+                document.getElementById('watching-chip').textContent = '—';
+                if (!manualClose) {
+                    // Banner goes back to waiting until Firebase pushes next URL or reconnect succeeds
+                    if (typeof setTunnelWaiting === 'function') setTunnelWaiting();
+                }
+                if (manualClose) log('Disconnected.', 'w');
+                else { log(`Lost connection. Reconnecting…`, 'w'); scheduleReconnect(); }
+            };
+            ws.onmessage = (evt) => {
+                if (evt.data instanceof ArrayBuffer) {
+                    if (pendingFrame) URL.revokeObjectURL(pendingFrame);
+                    pendingFrame = URL.createObjectURL(new Blob([evt.data], { type: 'image/jpeg' }));
+                    if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(renderFrame); }
+                    setLive(true); setAgentBadge(true); frames++; fpsCount++;
+                    document.getElementById('s-frames').textContent = frames;
+                    document.getElementById('s-kb').textContent = (evt.data.byteLength / 1024).toFixed(1);
+                    document.getElementById('frame-info').textContent = `FRAME ${frames}`;
+                    tickFPS(); return;
+                }
+                try {
+                    const m = JSON.parse(evt.data);
+                    console.log("Received:", m);
+                    if (m.type === 'agent_list') updateAgents(m.agents);
+                    else if (m.type === 'watching') log(`✓ Server confirmed watching: ${m.agent_id}`, 's');
+                    else if (m.type === 'notification') {
+                        log(`🔔 Notification from ${m.app_name}: ${m.title}`, 'w');
+                        if (typeof addNotification === 'function') addNotification(m.app_name, m.title, m.text, m.timestamp);
+                    }
+                    else if (m.type === 'agent_message') log(`Agent: ${JSON.stringify(m)}`);
+                } catch (e) { console.error("Parse error:", e); }
+            };
+        }
+
+        function disconnect() { manualClose = true; resetReconnect(); if (ws) { ws.close(); ws = null; } }
+        function sendCommand(cmd) {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !selectedAgent) return;
+            ws.send(JSON.stringify({ command: cmd, agent_id: selectedAgent }));
+            log(`→ ${cmd} to ${selectedAgent}`);
+        }
+
+        function addNotification(app, title, text, ts, isHistory = false, imgBase64 = null) {
+            const feed = document.getElementById('notif-feed');
+            if (feed.querySelector('.no-agents')) feed.innerHTML = '';
+            const timeStr = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const div = document.createElement('div');
+            div.className = 'notif-item';
+            let imgHtml = imgBase64 ? `<img src="data:image/jpeg;base64,${imgBase64}" class="notif-image" onclick="openFullscreenImage(this.src)"/>` : '';
+            div.innerHTML = `<div class="notif-head"><span class="notif-app">${app}</span><span class="notif-time">${timeStr}</span></div><div class="notif-title">${title || 'No Title'}</div><div class="notif-body">${text || ''}</div>${imgHtml}`;
+            feed.prepend(div);
+            while (feed.children.length > 50) feed.removeChild(feed.lastChild);
+            if (!isHistory) showScreenMessage(app, title, text, imgBase64);
+        }
+
+        function showScreenMessage(app, title, text, imgBase64 = null) {
+            const container = document.getElementById('screen-msg-container');
+            const toast = document.createElement('div');
+            toast.className = 'screen-toast';
+            let imgHtml = imgBase64 ? `<img src="data:image/jpeg;base64,${imgBase64}" style="width:50px; height:50px; border-radius:4px; object-fit:cover; margin-right:12px; border:1px solid rgba(255,255,255,0.2)"/>` : '';
+            toast.innerHTML = `<div class="toast-head"><span class="toast-app">${app}</span></div><div style="display:flex; align-items:center;">${imgHtml}<div class="toast-body">${title}: ${text}</div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.transition = 'all 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+            while (container.children.length > 3) container.removeChild(container.firstChild);
+        }
+
+        // ── Initial State ──
+        // url-input is inside manual-url-section; pre-fill it if saved
+        const savedUrl = localStorage.getItem('sw_url');
+        const _urlInp = document.getElementById('url-input');
+        if (savedUrl && _urlInp) _urlInp.value = savedUrl;
+        if (_urlInp) _urlInp.addEventListener('change', e => localStorage.setItem('sw_url', e.target.value.trim()));
+
+        function openFullscreenImage(src) {
+            const w = window.open("");
+            w.document.write('<html><body style="margin:0;background:#000;display:grid;place-items:center;"><img src="' + src + '" style="max-width:100%;max-height:100%;"/><' + '/body><' + '/html>');
+            w.document.close();
+        }
+    </script>
+
+    <!-- Firebase Auto-Sync (Cloud Tunnel) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        const cfg = {
+            apiKey: "AIzaSyC-dFMtinq0MdsgjDhEzsvesvSDnIr04DQ",
+            authDomain: "raju-122f3.firebaseapp.com",
+            databaseURL: "https://raju-122f3-default-rtdb.firebaseio.com",
+            projectId: "raju-122f3",
+            storageBucket: "raju-122f3.firebasestorage.app",
+            messagingSenderId: "529201617803",
+            appId: "1:529201617803:web:2bb0ba27255c26dceb2d8e",
+            measurementId: "G-EV8CMJG900"
+        };
+        try {
+            const firebaseApp = initializeApp(cfg);
+            const firebaseDb = getDatabase(firebaseApp);
+            onValue(ref(firebaseDb, 'config/serverUrl'), (snap) => {
+                const url = snap.val();
+                if (!url) return;
+
+                const isConnected = typeof ws !== 'undefined' && ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING);
+                
+                // If we're already connected/connecting to this exact URL, do nothing
+                if (isConnected && localStorage.getItem('sw_url') === url) {
+                    return;
+                }
+
+                // Update the url-input field (in manual section)
+                const inp = document.getElementById('url-input');
+                if (inp) inp.value = url;
+                
+                localStorage.setItem('sw_url', url);
+
+                if (typeof log === 'function') log(`☁️ [Cloud Tunnel] URL received → ${url}`, 's');
+
+                // Update tunnel banner to 'connecting' state
+                if (typeof setTunnelConnecting === 'function') setTunnelConnecting(url);
+
+                // Reconnect with new tunnel URL
+                if (typeof manualClose !== 'undefined') {
+                    manualClose = false;
+                    if (typeof resetReconnect === 'function') resetReconnect();
+                    if (typeof ws !== 'undefined' && ws) {
+                        try { ws.close(); } catch (e) { }
+                    }
+                    setTimeout(() => {
+                        if (typeof connect === 'function') connect(true);
+                    }, 300);
+                }
+            });
+        } catch (e) {
+            console.error('Firebase sync error:', e);
+        }
+    </script>
+</body>
+
+</html>
