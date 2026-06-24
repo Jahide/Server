@@ -17,7 +17,7 @@ logging.basicConfig(
 # ─── Config ───────────────────────────────────────────────────────────────────
 FIREBASE_RTDB_URL = os.environ.get(
     "FIREBASE_RTDB_URL",
-    "https://raju-122f3-default-rtdb.firebaseio.com"
+    "https://camm-c9aff-default-rtdb.firebaseio.com"
 )
 PORT              = int(os.environ.get("PORT", 8765))
 AGENT_STALE_SECS  = 45        # prune agents silent for this long
