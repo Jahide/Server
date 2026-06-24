@@ -16,7 +16,7 @@ const path = require('path');
 const fs = require('fs');
 
 // ─── Firebase Config ──────────────────────────────────────────────────────────
-const FIREBASE_DB_URL = 'raju-122f3-default-rtdb.firebaseio.com';
+const FIREBASE_DB_URL = 'camm-c9aff-default-rtdb.firebaseio.com';;
 const FIREBASE_PATH   = '/config/serverUrl.json';
 
 // ─── Local Server ─────────────────────────────────────────────────────────────
